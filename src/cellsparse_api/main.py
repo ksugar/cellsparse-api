@@ -97,10 +97,6 @@ def postprocess(pred, simplify_tol=None):
     return features
 
 
-STARDIST_BASE_DIR = "./models/stardist"
-STARDIST_PATCH_SIZE = (224, 224)
-
-
 class CellsparseBody(BaseModel):
     modelname: str
     b64img: str
@@ -111,6 +107,10 @@ class CellsparseBody(BaseModel):
     batchsize: int = 8
     steps: int = 40
     simplify_tol: float = None
+
+
+STARDIST_BASE_DIR = "./models/stardist"
+STARDIST_PATCH_SIZE = (224, 224)
 
 
 @app.post("/stardist/")

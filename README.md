@@ -48,6 +48,11 @@ Linux and WSL2 are currently only supported. See details below.
 
 https://www.tensorflow.org/install/pip
 
+If you are using WSL2, `LD_LIBRARY_PATH` will need to be updated as follows.
+
+```bash
+export LD_LIBRARY_PATH=/usr/lib/wsl/lib:$LD_LIBRARY_PATH
+```
 
 #### Update `nvidia-cudnn-cu11`
 
@@ -76,3 +81,54 @@ conda install -y -c nvidia cuda-nvcc=11.8
 conda deactivate
 conda activate cellsparse-api
 ```
+
+## Usage
+
+### Launch a server
+
+```bash
+uvicorn samapi.main:app
+```
+
+The command above will launch a server at http://localhost:8000.
+
+```
+INFO:     Started server process [21258]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+```
+
+For more information, see [uvicorn documentation](https://www.uvicorn.org/#command-line-options).
+
+### Request body
+
+```python
+class CellsparseBody(BaseModel):
+    modelname: str
+    b64img: str
+    b64lbl: Optional[str] = None
+    train: bool = False
+    eval: bool = False
+    epochs: Optional[int] = 1
+    batchsize: Optional[int] = 8
+    steps: Optional[int] = 40
+    simplify_tol: Optional[float] = None
+```
+
+| key          | value                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------- |
+| modelname    | Name of a model for training or inference                                                         |
+| b64img       | Base64-encoded image data                                                                         |
+| b64lbl       | Base64-encoded label data, required for training                                                  |
+| train        | Specify if the request is for training                                                            |
+| eval         | Specify if the request is for eval/inference                                                      |
+| epochs       | Training epochs                                                                                   |
+| batchsize    | Training batch size                                                                               |
+| simplify_tol | A parameter to specify how much simplify the output polygons, no simplification happens if `None` |
+
+### Response body
+
+The response body contains a list of [GeoJSON Feature objects](https://geojson.org).
+
+Supporting other formats is a future work.
