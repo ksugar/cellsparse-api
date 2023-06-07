@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "cellsparse-api"
+version = "0.1.0"
+description = ""
+authors = ["Ko Sugawara <ko.sugawara@ens-lyon.fr>"]
+readme = "README.md"
+packages = [{include = "cellsparse_api", from = "src"}]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+fastapi = {extras = ["all"], version = "^0.96.0"}
+cellsparse = {git = "https://github.com/ksugar/cellsparse-core.git"}
+geojson = "^3.0.1"
+shapely = "^2.0.1"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+flake8 = "^6.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
