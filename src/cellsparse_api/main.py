@@ -1,5 +1,6 @@
 import base64
 import io
+import os
 from typing import (
     Optional,
     Tuple,
@@ -15,6 +16,7 @@ from fastapi import FastAPI
 from geojson import Feature
 from geojson import Polygon as geojson_polygon
 import numpy as np
+from pathlib import Path
 from PIL import Image
 from pydantic import BaseModel
 from shapely.geometry import Polygon as shapely_polygon
@@ -97,6 +99,12 @@ def postprocess(pred, simplify_tol=None):
     return features
 
 
+MODEL_DIR = os.environ.get(
+    "CELLSPARSE_MODEL_DIR",
+    str(Path.home() / ".cellsparse/models"),
+)
+
+
 class CellsparseBody(BaseModel):
     modelname: str
     b64img: str
@@ -109,7 +117,7 @@ class CellsparseBody(BaseModel):
     simplify_tol: float = None
 
 
-STARDIST_BASE_DIR = "./models/stardist"
+STARDIST_BASE_DIR = str(Path(MODEL_DIR) / "stardist")
 STARDIST_PATCH_SIZE = (224, 224)
 
 
@@ -137,7 +145,7 @@ async def stardist(body: CellsparseBody):
     )
 
 
-CELLPOSE_MODEL_DIR = "./models/cellpose"
+CELLPOSE_MODEL_DIR = str(Path(MODEL_DIR) / "cellpose")
 
 
 @app.post("/cellpose/")
@@ -159,8 +167,8 @@ async def cellpose(body: CellsparseBody):
     )
 
 
-ELEPHANT_MODEL_DIR = "./models/elephant"
-ELEPHANT_LOG_PATH = "./models/elephant/logs"
+ELEPHANT_MODEL_DIR = str(Path(MODEL_DIR) / "elephant")
+ELEPHANT_LOG_PATH = str(Path(ELEPHANT_MODEL_DIR) / "logs")
 
 
 @app.post("/elephant/")
