@@ -87,7 +87,7 @@ conda activate cellsparse-api
 ### Launch a server
 
 ```bash
-uvicorn samapi.main:app
+uvicorn cellsparse_api.main:app
 ```
 
 The command above will launch a server at http://localhost:8000.
