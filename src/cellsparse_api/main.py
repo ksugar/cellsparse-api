@@ -154,7 +154,9 @@ async def stardist(body: CellsparseBody):
 
 @app.post("/stardist/reset/")
 async def stardist_reset(body: CellsparseResetBody):
-    shutil.rmtree(Path(STARDIST_BASE_DIR) / body.modelname)
+    p_model_dir = Path(STARDIST_BASE_DIR) / body.modelname
+    if p_model_dir.exists() and p_model_dir.is_dir():
+        shutil.rmtree(p_model_dir)
     return ""
 
 
@@ -183,7 +185,9 @@ async def cellpose(body: CellsparseBody):
 
 @app.post("/cellpose/reset/")
 async def cellpose_reset(body: CellsparseResetBody):
-    shutil.rmtree(Path(CELLPOSE_MODEL_DIR) / body.modelname)
+    p_model_dir = Path(CELLPOSE_MODEL_DIR) / body.modelname
+    if p_model_dir.exists() and p_model_dir.is_dir():
+        shutil.rmtree(p_model_dir)
     return ""
 
 
@@ -215,5 +219,7 @@ async def elephant(body: CellsparseBody):
 
 @app.post("/elephant/reset/")
 async def elephant_reset(body: CellsparseResetBody):
-    shutil.rmtree(Path(ELEPHANT_MODEL_DIR) / body.modelname)
+    p_model_dir = Path(ELEPHANT_MODEL_DIR) / body.modelname
+    if p_model_dir.exists() and p_model_dir.is_dir():
+        shutil.rmtree(p_model_dir)
     return ""
