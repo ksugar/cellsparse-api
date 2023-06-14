@@ -112,13 +112,15 @@ class CellsparseBody(BaseModel):
     train: bool = False
     eval: bool = False
     epochs: int = 1
+    trainpatch: int = 224
     batchsize: int = 8
-    steps: int = 40
+    steps: int = 200
+    lr: float = 0.001
+    minarea: float = 10.0
     simplify_tol: float = None
 
 
 STARDIST_BASE_DIR = str(Path(MODEL_DIR) / "stardist")
-STARDIST_PATCH_SIZE = (224, 224)
 
 
 @app.post("/stardist/")
@@ -127,12 +129,12 @@ async def stardist(body: CellsparseBody):
         grid=(2, 2),
         basedir=STARDIST_BASE_DIR,
         use_gpu=False,
-        train_epochs=1,
-        train_patch_size=STARDIST_PATCH_SIZE,
-        train_batch_size=8,
-        train_steps_per_epoch=200,
-        min_area=10,
-        train_learning_rate=0.001,
+        train_epochs=body.epochs,
+        train_patch_size=(body.trainpatch, body.trainpatch),
+        train_batch_size=body.batchsize,
+        train_steps_per_epoch=body.steps,
+        min_area=body.minarea,
+        train_learning_rate=body.lr,
     )
     return run(
         runner,
@@ -152,9 +154,10 @@ CELLPOSE_MODEL_DIR = str(Path(MODEL_DIR) / "cellpose")
 async def cellpose(body: CellsparseBody):
     runner = CellposeRunner(
         save_path=CELLPOSE_MODEL_DIR,
-        n_epochs=20,
-        nimg_per_epoch=40,
-        min_area=10,
+        n_epochs=body.epochs,
+        learning_rate=body.lr,
+        nimg_per_epoch=body.steps,
+        min_area=body.minarea,
     )
     return run(
         runner,
@@ -176,13 +179,12 @@ async def elephant(body: CellsparseBody):
     runner = ElephantRunner(
         model_dir=ELEPHANT_MODEL_DIR,
         log_path=ELEPHANT_LOG_PATH,
-        n_epochs=1,
-        lr=0.001,
-        r_min=3,
+        n_epochs=body.epochs,
+        lr=body.lr,
         increment_from=body.modelname,
-        crop_size=(128, 128),
-        n_crops=200,
-        min_area=10,
+        crop_size=(body.trainpatch, body.trainpatch),
+        n_crops=body.steps,
+        min_area=body.minarea,
     )
     return run(
         runner,
