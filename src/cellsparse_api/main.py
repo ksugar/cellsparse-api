@@ -1,6 +1,7 @@
 import base64
 import io
 import os
+import shutil
 from typing import (
     Optional,
     Tuple,
@@ -120,6 +121,10 @@ class CellsparseBody(BaseModel):
     simplify_tol: float = None
 
 
+class CellsparseResetBody(BaseModel):
+    modelname: str
+
+
 STARDIST_BASE_DIR = str(Path(MODEL_DIR) / "stardist")
 
 
@@ -147,13 +152,19 @@ async def stardist(body: CellsparseBody):
     )
 
 
+@app.post("/stardist/reset/")
+async def stardist_reset(body: CellsparseResetBody):
+    shutil.rmtree(Path(STARDIST_BASE_DIR) / body.modelname)
+    return ""
+
+
 CELLPOSE_MODEL_DIR = str(Path(MODEL_DIR) / "cellpose")
 
 
 @app.post("/cellpose/")
 async def cellpose(body: CellsparseBody):
     runner = CellposeRunner(
-        save_path=CELLPOSE_MODEL_DIR,
+        save_path=str(Path(CELLPOSE_MODEL_DIR) / body.modelname),
         n_epochs=body.epochs,
         learning_rate=body.lr,
         nimg_per_epoch=body.steps,
@@ -170,15 +181,20 @@ async def cellpose(body: CellsparseBody):
     )
 
 
+@app.post("/cellpose/reset/")
+async def cellpose_reset(body: CellsparseResetBody):
+    shutil.rmtree(Path(CELLPOSE_MODEL_DIR) / body.modelname)
+    return ""
+
+
 ELEPHANT_MODEL_DIR = str(Path(MODEL_DIR) / "elephant")
-ELEPHANT_LOG_PATH = str(Path(ELEPHANT_MODEL_DIR) / "logs")
 
 
 @app.post("/elephant/")
 async def elephant(body: CellsparseBody):
     runner = ElephantRunner(
-        model_dir=ELEPHANT_MODEL_DIR,
-        log_path=ELEPHANT_LOG_PATH,
+        model_dir=str(Path(ELEPHANT_MODEL_DIR) / body.modelname),
+        log_path=str(Path(ELEPHANT_MODEL_DIR) / body.modelname / "logs"),
         n_epochs=body.epochs,
         lr=body.lr,
         increment_from=body.modelname,
@@ -195,3 +211,9 @@ async def elephant(body: CellsparseBody):
         body.eval,
         body.simplify_tol,
     )
+
+
+@app.post("/elephant/reset/")
+async def elephant_reset(body: CellsparseResetBody):
+    shutil.rmtree(Path(ELEPHANT_MODEL_DIR) / body.modelname)
+    return ""
