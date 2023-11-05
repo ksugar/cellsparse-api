@@ -10,7 +10,10 @@ This is a part of the following paper. Please [cite](#citation) it when you use 
 
 ## Install
 
-### Mac OSX
+### Mac OSX (Apple silicon or AMD GPUs)
+
+Please check that your system satisfies the requirements listed in [the official instructions](https://developer.apple.com/metal/tensorflow-plugin/).\
+Othrewise, please follow [the installation steps for the CPU version](./#windows-native-mac-osx-linux-wsl2-cpu).
 
 ```bash
 conda create -n cellsparse-api -y python=3.11
@@ -38,7 +41,7 @@ python -m pip uninstall -y torch torchvision
 python -m pip install --no-deps torch torchvision --index-url https://download.pytorch.org/whl/cu113
 ```
 
-### Windows Native, Linux, WSL2 (CPU)
+### Windows Native, Mac OSX, Linux, WSL2 (CPU)
 
 Please note that training with CPU is very slow.
 
