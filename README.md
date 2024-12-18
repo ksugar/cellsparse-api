@@ -175,7 +175,7 @@ Supporting other formats is a future work.
 
 ### Troubleshooting
 
-If you try to process a large image and receive the following error, you may need to increase the `PIL.Image.MAX_IMAGE_PIXELS` value (default: `89478485`), or completely disable it (i.e. set the variable to the empty valie).
+If you try to process a large image and receive the following error, you may need to increase the `PIL.Image.MAX_IMAGE_PIXELS` value (default: `89478485`), or completely disable it (i.e. set the variable to the empty value).
 
 ```bash
 PIL.Image.DecompressionBombError: Image size (xxxxxxxxx pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack.
