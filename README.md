@@ -33,7 +33,6 @@ conda activate cellsparse-api
 python -m pip install -U pip
 conda install -y -c conda-forge cudatoolkit=11.3 cudnn=8.1.0
 python -m pip install "tensorflow<2.11"
-python -m pip install git+https://github.com/ksugar/stardist-sparse.git
 set PYTHONUTF8=1
 python -m pip install git+https://github.com/ksugar/cellsparse-api.git
 set PYTHONUTF8=0
@@ -173,6 +172,26 @@ class CellsparseBody(BaseModel):
 The response body contains a list of [GeoJSON Feature objects](https://geojson.org).
 
 Supporting other formats is a future work.
+
+### Troubleshooting
+
+If you try to process a large image and receive the following error, you may need to increase the `PIL.Image.MAX_IMAGE_PIXELS` value (default: `89478485`), or completely disable it (i.e. set the variable to the empty valie).
+
+```bash
+PIL.Image.DecompressionBombError: Image size (xxxxxxxxx pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack.
+```
+
+In Linux and MacOS, you can set the environment variable as follows.
+
+```bash
+export PIL_MAX_IMAGE_PIXELS="" # or specific value (integer)
+```
+
+In Windows, you can set the environment variable as follows.
+
+```cmd
+set PIL_MAX_IMAGE_PIXELS="" # or specific value (integer)
+```
 
 ## Citation
 
