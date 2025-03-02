@@ -5,16 +5,19 @@ import os
 from typing import (
     Optional,
     Tuple,
+    Sequence,
 )
 from csbdeep.utils import normalize
 from geojson import Feature
 from geojson import Polygon as geojson_polygon
+from fastapi import HTTPException, UploadFile
 import numpy as np
 from pathlib import Path
 from PIL import Image
 from pydantic import BaseModel
 from shapely.geometry import Polygon as shapely_polygon
 from skimage import measure
+import tifffile
 
 logging.basicConfig(level=os.getenv("LOGLEVEL", "INFO").upper())
 logger = logging.getLogger("uvicorn")
@@ -94,26 +97,28 @@ def postprocess(pred, simplify_tol=None):
 def run(
     runner,
     modelname,
-    img,
-    lbl=None,
+    imgs,
+    lbls=None,
     train=False,
     eval=False,
     simplify_tol=None,
 ):
-    img = normalize(img, 0, 100, axis=(0, 1))
+    imgs = [normalize(img, 0, 100, axis=(0, 1)) for img in imgs]
     if train:
-        lbl = lbl.astype(int) - 1
-        runner._train([img], [lbl], [img], [lbl], modelname)
+        lbls = [lbl.astype(int) - 1 for lbl in lbls]
+        runner._train(imgs, lbls, imgs, lbls, modelname)
     if eval:
-        pred = runner._eval([img], modelname)[0]
+        pred = runner._eval(imgs, modelname)[0]
         return postprocess(pred, simplify_tol)
     return []
 
 
 class CellsparseBody(BaseModel):
     modelname: str
-    b64img: str
+    b64img: Optional[str] = None
     b64lbl: Optional[str] = None
+    b64imgs: Optional[Sequence[str]] = None
+    b64lbls: Optional[Sequence[str]] = None
     train: bool = False
     eval: bool = False
     epochs: int = 1
@@ -128,3 +133,15 @@ class CellsparseBody(BaseModel):
 class CellsparseResetBody(BaseModel):
     modelname: str
     pretrained: Optional[str] = None
+
+
+async def read_image_from_upload_file(file: UploadFile) -> np.ndarray:
+    if file.content_type != "image/tiff":
+        raise HTTPException(
+            status_code=400, detail="Invalid file type. Only TIFF images are allowed."
+        )
+
+    file_bytes = await file.read()
+    with tifffile.TiffFile(io.BytesIO(file_bytes)) as tif:
+        img_array = tif.asarray()
+    return img_array

@@ -1,8 +1,9 @@
 import logging
 from pathlib import Path
 import shutil
+from typing import List, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, File, Form, UploadFile
 from cellsparse.runners import CellposeRunner
 from cellpose import models
 
@@ -11,6 +12,7 @@ from cellsparse_api.utils import (
     CellsparseBody,
     CellsparseResetBody,
     MODEL_DIR,
+    read_image_from_upload_file,
     run,
 )
 
@@ -28,25 +30,41 @@ class CellposeBody(CellsparseBody):
 
 
 @router.post("/cellpose/")
-async def cellpose(body: CellposeBody):
+async def cellpose(
+    images: List[UploadFile] = File(...),
+    labels: Optional[List[UploadFile]] = File(None),
+    json_data: str = Form(...),
+):
+    try:
+        params = CellposeBody.parse_raw(json_data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON format: {str(e)}")
+
+    if params.train and (labels is None or 0 == len(labels)):
+        raise HTTPException(status_code=400, detail="Labels are required for training")
+
     runner = CellposeRunner(
-        channels=[body.chan1, body.chan2],
-        save_path=str(Path(CELLPOSE_MODEL_DIR) / body.modelname),
-        n_epochs=body.epochs,
-        learning_rate=body.lr,
-        nimg_per_epoch=body.steps,
-        min_area=body.minarea,
+        channels=[params.chan1, params.chan2],
+        save_path=str(Path(CELLPOSE_MODEL_DIR) / params.modelname),
+        n_epochs=params.epochs,
+        learning_rate=params.lr,
+        nimg_per_epoch=params.steps,
+        min_area=params.minarea,
     )
-    img = decode_image(body.b64img)
-    lbl = decode_image(body.b64lbl) if body.b64lbl else None
+    imgs = [await read_image_from_upload_file(img) for img in images]
+    logger.info(f"params: {params}")
+    if params.train:
+        lbls = [await read_image_from_upload_file(lbl) for lbl in labels]
+    else:
+        lbls = None
     return run(
         runner,
-        body.modelname + ".pth",
-        img,
-        lbl,
-        body.train,
-        body.eval,
-        body.simplify_tol,
+        params.modelname + ".pth",
+        imgs,
+        lbls,
+        params.train,
+        params.eval,
+        params.simplify_tol,
     )
 
 

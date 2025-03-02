@@ -1,17 +1,18 @@
 import logging
 from pathlib import Path
 import shutil
+from typing import List, Optional
 
 from cellsparse.runners import ElephantRunner
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, File, Form, UploadFile
 import numpy as np
 from elephant.common import init_seg_models
 
 from cellsparse_api.utils import (
-    decode_image,
     CellsparseBody,
     CellsparseResetBody,
     MODEL_DIR,
+    read_image_from_upload_file,
     run,
 )
 
@@ -22,30 +23,50 @@ router = APIRouter()
 ELEPHANT_MODEL_DIR = str(Path(MODEL_DIR) / "elephant")
 
 
+def ensure_grayscale(img: np.ndarray):
+    if img.ndim != 3:
+        return np.mean(img, axis=2)
+    return img
+
+
 @router.post("/elephant/")
-async def elephant(body: CellsparseBody):
+async def elephant(
+    images: List[UploadFile] = File(...),
+    labels: Optional[List[UploadFile]] = File(None),
+    json_data: str = Form(...),
+):
+    try:
+        params = StarDistBody.parse_raw(json_data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON format: {str(e)}")
+
+    if params.train and (labels is None or 0 == len(labels)):
+        raise HTTPException(status_code=400, detail="Labels are required for training")
+
     runner = ElephantRunner(
         model_dir=str(Path(ELEPHANT_MODEL_DIR) / body.modelname),
         log_path=str(Path(ELEPHANT_MODEL_DIR) / body.modelname / "logs"),
-        n_epochs=body.epochs,
-        lr=body.lr,
-        increment_from=body.modelname,
-        crop_size=(body.trainpatch, body.trainpatch),
-        n_crops=body.steps,
-        min_area=body.minarea,
+        n_epochs=params.epochs,
+        lr=params.lr,
+        increment_from=params.modelname,
+        crop_size=(params.trainpatch, params.trainpatch),
+        n_crops=params.steps,
+        min_area=params.minarea,
     )
-    img = decode_image(body.b64img)
-    if img.ndim == 3:
-        img = np.mean(img, axis=2)
-    lbl = decode_image(body.b64lbl) if body.b64lbl else None
+    imgs = [await ensure_grayscale(read_image_from_upload_file(img)) for img in images]
+    logger.info(f"params: {params}")
+    if params.train:
+        lbls = [await read_image_from_upload_file(lbl) for lbl in labels]
+    else:
+        lbls = None
     return run(
         runner,
-        body.modelname,
-        img,
-        lbl,
-        body.train,
-        body.eval,
-        body.simplify_tol,
+        params.modelname,
+        imgs,
+        lbls,
+        params.train,
+        params.eval,
+        params.simplify_tol,
     )
 
 

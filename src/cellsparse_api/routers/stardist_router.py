@@ -1,16 +1,17 @@
 import logging
 from pathlib import Path
 import shutil
+from typing import List, Optional
 
 from cellsparse.runners import StarDistRunner
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, File, Form, UploadFile
 from stardist.models import StarDist2D
 
 from cellsparse_api.utils import (
-    decode_image,
     CellsparseBody,
     CellsparseResetBody,
     MODEL_DIR,
+    read_image_from_upload_file,
     run,
 )
 
@@ -26,29 +27,45 @@ class StarDistBody(CellsparseBody):
 
 
 @router.post("/stardist/")
-async def stardist(body: StarDistBody):
+async def stardist(
+    images: List[UploadFile] = File(...),
+    labels: Optional[List[UploadFile]] = File(None),
+    json_data: str = Form(...),
+):
+    try:
+        params = StarDistBody.parse_raw(json_data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON format: {str(e)}")
+
+    if params.train and (labels is None or 0 == len(labels)):
+        raise HTTPException(status_code=400, detail="Labels are required for training")
+
     runner = StarDistRunner(
-        n_channel_in=body.n_channels_in,
+        n_channel_in=params.n_channels_in,
         grid=(2, 2),
         basedir=STARDIST_BASE_DIR,
         use_gpu=False,
-        train_epochs=body.epochs,
-        train_patch_size=(body.trainpatch, body.trainpatch),
-        train_batch_size=body.batchsize,
-        train_steps_per_epoch=body.steps,
-        min_area=body.minarea,
-        train_learning_rate=body.lr,
+        train_epochs=params.epochs,
+        train_patch_size=(params.trainpatch, params.trainpatch),
+        train_batch_size=params.batchsize,
+        train_steps_per_epoch=params.steps,
+        min_area=params.minarea,
+        train_learning_rate=params.lr,
     )
-    img = decode_image(body.b64img)
-    lbl = decode_image(body.b64lbl) if body.b64lbl else None
+    imgs = [await read_image_from_upload_file(img) for img in images]
+    logger.info(f"params: {params}")
+    if params.train:
+        lbls = [await read_image_from_upload_file(lbl) for lbl in labels]
+    else:
+        lbls = None
     return run(
         runner,
-        body.modelname,
-        img,
-        lbl,
-        body.train,
-        body.eval,
-        body.simplify_tol,
+        params.modelname,
+        imgs,
+        lbls,
+        params.train,
+        params.eval,
+        params.simplify_tol,
     )
 
 
